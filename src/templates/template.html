@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Node {{node_id}}</title>
+</head>
+<body>
+    <h1>Node {{node_id}}</h1>
+	<table>
+		{% for i, bucket in buckets %}
+			<tr>
+				<td>Bucket {{ i }}:</td>
+				<td>
+					{% for contact in bucket %}
+						<div>
+							<a href="http://{{contact}}">
+								{{contact}}
+							</a>
+						</div>
+					{% endfor %}
+				</td>
+			</tr>
+		{% endfor %}
+	</table>
+</body>
+</html>

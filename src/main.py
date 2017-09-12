@@ -101,7 +101,7 @@ def init_buckets():
 def render_this_path():
     result = render_template("template.html",
                              node_id=my_id,
-                             buckets=buckets)
+                             buckets=enumerate(buckets))
     return result
 
 
