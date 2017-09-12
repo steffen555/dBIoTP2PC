@@ -15,10 +15,10 @@ def receive_ping(node_id):
 def find_node():
 	return "TODO:node_id"
 
-def send_ping(ip, port):
+def send_ping(ip, other_port, my_port):
 	my_id = "TODO_node_id"
-	data = {"port": port}
-	url = "http://%s:%d/api/kademlia/nodes/%s/" % (ip, port, my_id)
+	data = {"port": my_port}
+	url = "http://%s:%d/api/kademlia/nodes/%s/" % (ip, other_port, my_id)
 	req = requests.put(url, data=data)
 	print(req.text)
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 	if len(sys.argv) > 3:
 		initial_peer_ip = sys.argv[2]
 		initial_peer_port = int(sys.argv[3])
-		send_ping(initial_peer_ip, initial_peer_port)
+		send_ping(initial_peer_ip, initial_peer_port, my_port)
 
 	app.run(port=my_port)
 
