@@ -6,6 +6,11 @@
 </head>
 <body>
     <h1>Node {{node_id}}</h1>
+	OMG you can search for an ID!!!
+	<form action="/closest_nodes" method="GET">
+        <input type="text" name="text">
+        <input type="submit" name="my-form" value="Send">
+    </form>
 	<table border="1">
 		{% for i, bucket in buckets %}
 			<tr>
