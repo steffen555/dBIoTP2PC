@@ -6,7 +6,7 @@
 </head>
 <body>
     <h1>Node {{node_id}}</h1>
-	<table>
+	<table border="1">
 		{% for i, bucket in buckets %}
 			<tr>
 				<td>Bucket {{ i }}:</td>
@@ -14,7 +14,7 @@
 					{% for contact in bucket %}
 						<div>
 							<a href="http://{{contact}}">
-								{{contact}}
+								{{contact.node_id}}
 							</a>
 						</div>
 					{% endfor %}

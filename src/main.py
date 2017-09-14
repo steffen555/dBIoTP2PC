@@ -6,6 +6,7 @@ import config
 import requests
 import hashlib
 import time
+import json
 
 # needed for Flask to work
 app = Flask(__name__)
@@ -24,10 +25,19 @@ class Contact:
     def __str__(self):
         return "%s:%s" % (self.ip_address, self.port)
 
+    def __repr__(self):
+        return "%s@%s:%s" % (self.node_id, self.ip_address, self.port)
+
+    def to_triple(self):
+        return self.ip_address, self.port, self.node_id
+
 
 def is_alive(contact):
-    # TODO do this better
-    return False
+    try:
+        send_ping(contact.ip_address, contact.port)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+        return False
+    return True
 
 
 def add_to_bucket(contact):
@@ -55,27 +65,34 @@ def add_to_bucket(contact):
     buckets[index] = bucket
 
 
+# TODO: documentation
 @app.route("/api/kademlia/nodes/<int:node_id>/", methods=["PUT"])
 def receive_ping(node_id):
     ip_address = request.remote_addr
     port = request.form["port"]
-    contact = Contact(node_id, ip_address, port, time.time())
+    contact = Contact(node_id, ip_address, int(port), time.time())
     add_to_bucket(contact)
-
-    # TODO: we should send back data so the client can also add us to its
-    # bucket.
-    return "PONG!"
+    return str(my_id)
 
 
-@app.route("/api/kademlia/nodes/", methods=["GET"])
-def view_nodes():
-    return "TODO:node_id"
+# TODO: documentation
+@app.route("/api/kademlia/nodes/<int:node_id>/", methods=["GET"])
+def find_node(node_id):
+    contacts = [contact for bucket in buckets for contact in bucket]  # TODO: do not return requestor
+    contacts = sorted(contacts, key=lambda c: distance(c.node_id, node_id))
+    print(contacts)
+    top_k = contacts[:config.k]
+    nice_json = json.dumps([contact.to_triple() for contact in top_k])
+    print(nice_json)
+    return nice_json
 
 
-def send_ping(ip, other_port, my_port):
+def send_ping(ip, other_port):
     data = {"port": my_port}
     url = "http://%s:%d/api/kademlia/nodes/%d/" % (ip, other_port, my_id)
-    req = requests.put(url, data=data)
+    req = requests.put(url, data=data, timeout=config.timeout)
+    contact = Contact(int(req.text), ip, other_port, time.time())
+    add_to_bucket(contact)
     print(req.text)
 
 
@@ -83,7 +100,7 @@ def distance(x, y):
     return x ^ y
 
 
-def init_id(my_port):
+def init_id():
     global my_id
     value_to_be_hashed = str(get_mac()) + str(my_port)
     num_digits = config.B / 4
@@ -110,14 +127,15 @@ if __name__ == "__main__":
         print("No port given")
         exit(1)
 
+    global my_port
     my_port = int(sys.argv[1])
 
-    init_id(my_port)
+    init_id()
     init_buckets()
 
     if len(sys.argv) > 3:
         initial_peer_ip = sys.argv[2]
         initial_peer_port = int(sys.argv[3])
-        send_ping(initial_peer_ip, initial_peer_port, my_port)
+        send_ping(initial_peer_ip, initial_peer_port)
 
     app.run(host="0.0.0.0", port=my_port)
