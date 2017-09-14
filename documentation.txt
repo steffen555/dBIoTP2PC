@@ -1,0 +1,39 @@
+
+
+main.py is the main script. It is supposed to be run on the command line.
+
+The first argument to main.py is the port number on which to run the peer. Two
+more arguments, an IP address and a port, may optionally be given. If they are
+given, they will be used as the initial peer in the network.
+
+After running main.py, a web interface is available on the local machine on
+the given port.
+
+
+The system can also be accessed programatically via the following API:
+
+--- PUT /api/kademlia/nodes/MY_ID/ ---
+
+This implements the PING command of Kademlia. It is used to add the sender to
+the recipient's buckets list. MY_ID must be a decimal integer representing the
+sender's node ID. The sender's port number is given as the "port" parameter in
+the HTTP request body.
+
+
+--- GET /api/kademlia/closest_nodes/NODE_ID/ ---
+
+This implements the FIND_NODE command of Kademlia. It is used to find the k
+closest nodes to NODE_ID. The result is a list of up to k triples of
+(ip_address, port, node_id) represented as JSON.
+
+
+
+
+
+Other notes:
+- we use Flask as our web server
+- we use the Python Requests module as HTTP client
+- we use the built-in Python JSON module to jsonify data in FIND_NODE
+- the start_script.py file lets us automatically spawn a number of peers which
+  connect to each other
+

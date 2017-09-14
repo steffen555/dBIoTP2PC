@@ -65,7 +65,6 @@ def add_to_bucket(contact):
     buckets[index] = bucket
 
 
-# TODO: documentation
 @app.route("/api/kademlia/nodes/<int:node_id>/", methods=["PUT"])
 def receive_ping(node_id):
     ip_address = request.remote_addr
@@ -75,8 +74,7 @@ def receive_ping(node_id):
     return str(my_id)
 
 
-# TODO: documentation
-@app.route("/api/kademlia/nodes/<int:node_id>/", methods=["GET"])
+@app.route("/api/kademlia/closest_nodes/<int:node_id>/", methods=["GET"])
 def find_node(node_id):
     contacts = [contact for bucket in buckets for contact in bucket]  # TODO: do not return requestor
     contacts = sorted(contacts, key=lambda c: distance(c.node_id, node_id))
