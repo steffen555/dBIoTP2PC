@@ -42,6 +42,8 @@ def is_alive(contact):
 
 def add_to_bucket(contact):
     print("Adding %s to a bucket." % contact)
+    if (contact.node_id == my_id):
+        return  # We may never, ever add ourselves to our own bucket!
     index = int(math.log(distance(my_id, contact.node_id), 2))
     bucket = buckets[index]
     assert len(bucket) <= config.k
@@ -74,15 +76,26 @@ def receive_ping(node_id):
     return str(my_id)
 
 
-@app.route("/api/kademlia/closest_nodes/<int:node_id>/", methods=["GET"])
-def find_node(node_id):
-    contacts = [contact for bucket in buckets for contact in bucket]  # TODO: do not return requestor
+def get_top_k(node_id):
+    contacts = [contact for bucket in buckets for contact in bucket]
     contacts = sorted(contacts, key=lambda c: distance(c.node_id, node_id))
     print(contacts)
     top_k = contacts[:config.k]
-    nice_json = json.dumps([contact.to_triple() for contact in top_k])
-    print(nice_json)
-    return nice_json
+    return top_k
+
+
+@app.route("/api/kademlia/closest_nodes/<int:node_id>/", methods=["GET"])
+def get_closest_nodes_as_json(node_id):
+    return json.dumps([contact.to_triple() for contact in get_top_k(node_id)])
+
+
+@app.route("/closest_nodes/", methods=["GET"])
+def get_closest_nodes_as_html():
+    node_id = request.args.get('node_id')
+    return render_template("template.html",
+                           node_id=my_id,
+                           buckets=enumerate(buckets),
+                           search_result=get_top_k(int(node_id))),
 
 
 def send_ping(ip, other_port):
@@ -116,7 +129,8 @@ def init_buckets():
 def render_this_path():
     result = render_template("template.html",
                              node_id=my_id,
-                             buckets=enumerate(buckets))
+                             buckets=enumerate(buckets),
+                             search_result=None)
     return result
 
 

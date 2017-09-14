@@ -1,6 +1,7 @@
 import subprocess
 import random
 import time
+import os
 
 number_of_peers = 50
 
@@ -12,6 +13,5 @@ for i in range(0, number_of_peers - 1):
     peers_list.append(p)
 raw_input("Type anything to close all peers\n")
 p.kill()
-for peer in peers_list:
-    peer.kill()
+os.system("killall python")
 print("Done!")
