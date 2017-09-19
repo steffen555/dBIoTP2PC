@@ -1,0 +1,4 @@
+GET "/pi/sensors/temperature/0/"
+GET "/pi/sensors/humidity/0/"
+GET "/pi/sensors/motion/0/"
+POST (value=1 or value=0) to "/pi/actuators/leds/0/"
