@@ -119,6 +119,11 @@ def receive_wot_registration():
 		requests.get(url, headers=request.headers)
 	return "OK"
 
+@app.route("/api/wotds/SOMETHING_REST_IS_HARD", methods=["GET"])
+def receive_TODO():
+	return "TODO"
+	
+
 def get_top_k(node_id):
 	buckets_lock.acquire()
 	contacts = [contact for bucket in buckets for contact in bucket]
@@ -328,7 +333,7 @@ def render_root():
 def render_wotds():
 	return render_template("wotds.html", 
 		nodes=nodes_for_which_we_are_responsible,
-		data=collected_data.values())
+		sensordata_collections=collected_data.values())
 
 @app.route("/kademlia/")
 def render_kademlia():
@@ -341,12 +346,17 @@ def render_kademlia():
 	buckets_lock.release()
 	return result
 
+class DataPoint:
+	def __init__(self, timestamp, raw_data):
+		self.raw_data = raw_data
+		self.timestamp = timestamp
+
 def fetch_wot_data_from(node):
-	datapoint = requests.get(node.url).text
-	# TODO: have timestamps, too
+	timestamp, raw_data = json.loads(requests.get(node.url).text)
+	datapoint = DataPoint(timestamp, raw_data)
 
 	if node.node_id not in collected_data:
-		collected_data[node.node_id] = SensorData(node.description)
+		collected_data[node.node_id] = SensorDataCollection(node.description)
 	
 	collected_data[node.node_id].add_datapoint(datapoint)
 
@@ -355,13 +365,13 @@ def fetch_wot_data_from(node):
 
 # TODO: refactor this file to move out the Kademlia layer.
 
-class SensorData:
+class SensorDataCollection:
 	def __init__(self, description):
-		self.data = []
+		self.datapoints = []
 		self.description = description
 	
 	def add_datapoint(self, data_point):
-		self.data.append(data_point)
+		self.datapoints.append(data_point)
 
 nodes_for_which_we_are_responsible = []
 collected_data = {}

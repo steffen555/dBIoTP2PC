@@ -3,6 +3,8 @@ import Adafruit_DHT
 import RPi.GPIO as GPIO
 import id_generation
 import requests
+import json
+import time
 
 WEB_SERVER_IP = "127.0.0.1"
 WEB_SERVER_PORT = 8080
@@ -26,24 +28,22 @@ def render_root():
 @app.route("/pi/sensors/temperature/0/")
 def get_temperature():
 	humidity, temperature = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, 12)
-	return "%f" % temperature
+	return json.dumps([time.time(), temperature])
 
 @app.route("/pi/sensors/humidity/0/")
 def get_humidity():
 	humidity, temperature = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, 12)
-	return "%f" % humidity
+	return json.dumps([time.time(), humidity])
 
 @app.route("/pi/sensors/motion/0/")
 def get_motion():
-	return "%d" % GPIO.input(MOTION_PIN)
+	return json.dumps([time.time(), GPIO.input(MOTION_PIN)])
 
 @app.route("/pi/actuators/leds/0/", methods=["POST"])
 def handle_led_set_value():
 	value = GPIO.LOW if request.form["value"] == "0" else GPIO.HIGH
 	GPIO.output(LED_PIN, value)
 	return "OK"
-
-
 
 def connect_sensor_to_kademlia(sensor_url, description):
 	sensor_id = id_generation.generate_id(sensor_url)

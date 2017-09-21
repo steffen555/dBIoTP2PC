@@ -22,14 +22,25 @@
 	<br/>
 	<h1>Here is our data:</h1>
 	
-	<table>
-		{% for d in data %}
-			<tr>
-				<td>{{ d.description }} </td>
-				<td>{{ d.data }} </td>
-			</tr>
-		{% endfor %}
-	</table>
+	{% for sensordata_collection in sensordata_collections %}
+		<div>
+				{{ sensordata_collection.description }}
+				<br/>
+				<table border="1">
+					<tr>
+						<td>Time</td>
+						<td>Data</td>
+					</tr>
+					{% for datapoint in sensordata_collection.datapoints %}
+						<tr>
+							<td>{{ datapoint.timestamp }}</td>
+							<td>{{ datapoint.raw_data }}</td>
+						</tr>
+					{% endfor %}
+				</table>
+		</div>
+			
+	{% endfor %}
 
 </body>
 
