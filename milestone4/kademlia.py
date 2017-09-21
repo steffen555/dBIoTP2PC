@@ -83,41 +83,6 @@ def receive_ping():
 		send_delayed_ping(ip_address, port, 0)
 	return str(my_id)
 
-class WOTNode:
-	def __init__(self, node_id, url, description):
-		self.node_id = node_id
-		self.url = url
-		self.description = description
-	
-	def __str__(self):
-		return "Node %d (url: '%s', description: '%s')" % (
-			self.node_id, self.url, self.description)
-
-@app.route("/api/wotds/responsibility/", methods=["GET"])
-def receive_kademlia_wot_registration():
-	node_id = int(request.headers["node_id"])
-	url = request.headers["url"]
-	description = request.headers["description"]
-	node = WOTNode(node_id, url, description)
-	nodes_for_which_we_are_responsible.append(node)
-
-@app.route("/api/wotds/registration/", methods=["GET"])
-def receive_wot_registration():
-	node_id = int(request.headers["node_id"])
-	url = request.headers["url"]
-	description = request.headers["description"]
-	closest_other_nodes = iterative_find_node(node_id)
-	if (len(closest_other_nodes) == 0 or
-		distance(my_id, node_id) < distance(closest_other_nodes[0].node_id, node_id)):
-		# we are closest
-		node = WOTNode(node_id, url, description)
-		nodes_for_which_we_are_responsible.append(node)
-	else:
-		# send it on to the closest one
-		node = closest_other_nodes[0]
-		url = "http://%s:%s/api/wotds/responsibility/" % (node.ip_address, node.port)
-		requests.get(url, headers=request.headers)
-	return "OK"
 
 def get_top_k(node_id):
 	buckets_lock.acquire()
@@ -320,18 +285,9 @@ def init_key_value_pairs():
 	global key_value_pairs
 	key_value_pairs = {}
 
+
 @app.route("/")
-def render_root():
-	return render_template("root.html")
-
-@app.route("/wotds/")
-def render_wotds():
-	return render_template("wotds.html", 
-		nodes=nodes_for_which_we_are_responsible,
-		data=collected_data.values())
-
-@app.route("/kademlia/")
-def render_kademlia():
+def render_this_path():
 	buckets_lock.acquire()
 	result = render_template("template.html",
 							 node_id=my_id,
@@ -341,37 +297,6 @@ def render_kademlia():
 	buckets_lock.release()
 	return result
 
-def fetch_wot_data_from(node):
-	datapoint = requests.get(node.url).text
-	# TODO: have timestamps, too
-
-	if node.node_id not in collected_data:
-		collected_data[node.node_id] = SensorData(node.description)
-	
-	collected_data[node.node_id].add_datapoint(datapoint)
-
-	# TODO handle if node dies
-
-
-# TODO: refactor this file to move out the Kademlia layer.
-
-class SensorData:
-	def __init__(self, description):
-		self.data = []
-		self.description = description
-	
-	def add_datapoint(self, data_point):
-		self.data.append(data_point)
-
-nodes_for_which_we_are_responsible = []
-collected_data = {}
-
-def wot_fetcher():
-	while True:
-		for node in nodes_for_which_we_are_responsible:
-			fetch_wot_data_from(node)
-
-		time.sleep(config.fetch_timeout)
 
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
@@ -385,9 +310,6 @@ if __name__ == "__main__":
 	init_key_value_pairs()
 	init_buckets()
 	buckets_lock = threading.RLock()
-
-	t = threading.Thread(target=wot_fetcher)
-	t.start()
 
 	if len(sys.argv) > 3:
 		initial_peer_ip = sys.argv[2]

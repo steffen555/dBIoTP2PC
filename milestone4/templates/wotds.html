@@ -1,0 +1,36 @@
+
+<html>
+<head>
+	<title>WOTDS</title>
+</head>
+<body>
+
+
+	<h1>We are responsible for these nodes:</h1>
+	<table>
+		{% for node in nodes %}
+			<tr>
+				<td>{{ node }} </td>
+			</tr>
+			
+
+
+		{% endfor %}
+
+	</table>
+
+	<br/>
+	<h1>Here is our data:</h1>
+	
+	<table>
+		{% for d in data %}
+			<tr>
+				<td>{{ d.description }} </td>
+				<td>{{ d.data }} </td>
+			</tr>
+		{% endfor %}
+	</table>
+
+</body>
+
+</html>
