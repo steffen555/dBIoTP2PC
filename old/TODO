@@ -1,3 +1,20 @@
-
-
+- Enable your WoT nodes to automatically register themselves with your
+  Kademlia network.
+	- probably means: WoT nodes must be able to use the Kademlia network as
+	  clients (but not necessarily as peers)
+- it becomes the responsibility of the Kademlia peer closest to the WoT node's
+  ID to retrieve sensor data from the WoT node, and to ensure that there are k
+  copies of that data across the network.
+- It is the responsibility of the Kademlia peers to store historical data. 
+- It should be possible to navigate from the responsible Kademlia peer to its
+  associated WoT node(s) for closer inspection.
+- The Kademlia peers should ensure that if a Kademlia peer responsible for
+  communicating with an WoT node fails, some other peer (typically the closest
+  to the WoT node's ID) takes over the responsibilities.
+- It should be possible to inspect the collected data at any of the Kademlia
+  peers storing a copy. This can be done in, e.g., a plot or a table.
+- You must document your REST API, and bring it to the milestone meeting.
+- you must also upload all your code along with instructions on how to get the
+  system running. It would be very nice to have a single script that starts
+  the system with a fair number of peers.
 
