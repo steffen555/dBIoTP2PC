@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Node {{node_id}}</title>
+</head>
+    <h1>Node {{node_id}}</h1>
+
+	Search for an ID:
+	<form action="/closest_nodes/" method="GET">
+        <input type="text" name="node_id">
+        <input type="submit" name="my-form" value="Send">
+    </form>
+    {% if search_result is not none %}
+        <table border="1">
+            {% for contact in search_result %}
+                <tr><td><a href="http://{{contact.ip_address}}:{{contact.port}}/">
+								{{contact.node_id}}</a></td></tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+	<br/>
+
+	Search for a key:
+	<form action="/get_value/" method="GET">
+        <input type="text" name="key">
+        <input type="submit" name="my-form" value="Send">
+    </form>
+	<br/>
+
+	Store a key/value pair:
+	<form action="/store_value/" method="POST">
+        Key: <input type="text" name="key"> <br>
+        Value: <input type="text" name="value">
+        <input type="submit" name="my-form" value="Send">
+    </form>
+    <br/>
+
+
+	Buckets:
+	<table border="1">
+		{% for i, bucket in buckets %}
+			<tr>
+				<td>Bucket {{ i }}:</td>
+				<td>
+					{% for contact in bucket %}
+						<div>
+							<a href="http://{{contact.ip_address}}:{{contact.port}}/">
+								{{contact.node_id}}
+							</a>
+						</div>
+					{% endfor %}
+				</td>
+			</tr>
+		{% endfor %}
+	</table>
+    <br/>
+
+	Key/Value pairs:
+	<table border="1">
+		{% for key, value in kv_pairs %}
+			<tr>
+				<td> {{key}}</td>
+				<td> {{value}}</td>
+			</tr>
+		{% endfor %}
+	</table>
+    <br/>
+
+
+
+</body>
+</html>

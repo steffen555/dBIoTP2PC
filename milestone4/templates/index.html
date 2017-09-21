@@ -1,0 +1,44 @@
+
+<html>
+<head>
+	<title>Sensor information</title>
+</head>
+<body>
+	<h1>Sensor information</h1>
+
+	<div>
+		<h3>PIR motion sensor</h3>
+		<table border="1">
+			<tr>
+				<td>Anything nearby?</td>
+				<td>{{ "Yes" if nearby else "No" }}</td>
+			</tr>
+		</table>
+	</div>
+
+	<div>
+		<h3>DHT22 sensor</h3>
+		<table border="1">
+			<tr>
+				<td>Humidity</td>
+				<td>{{ humidity }}%</td>
+			</tr>
+			<tr>
+				<td>Temperature</td>
+				<td>{{ temperature }} &deg; C</td>
+			</tr>
+		</table>
+	</div>
+
+	<div>
+		<h3>LED control</h3>
+		<form action="/pi/actuators/leds/0/" method="POST">
+			<input type="text" name="value"/>
+			<input type="submit" value="send"/>
+		</form>
+	</div>
+
+
+</body>
+
+</html>
