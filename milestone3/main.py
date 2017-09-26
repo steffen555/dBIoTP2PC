@@ -79,6 +79,16 @@ def receive_ping():
 		send_delayed_ping(ip_address, port, 0)
 	return str(my_id)
 
+@app.route("/get_value")
+def handle_get_value():	
+	key = request.args["key"]
+	return "TODO"
+
+@app.route("/store_value", methods=["POST"])
+def handle_store_value():	
+	key = request.form["key"]
+	value = request.form["value"]
+	return "TODO"
 
 def get_top_k(node_id):
 	buckets_lock.acquire()
