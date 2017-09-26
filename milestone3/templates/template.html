@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Node {{node_id}}</title>
+</head>
+    <h1>Node {{node_id}}</h1>
+	OMG you can search for an ID!!!
+	<form action="/closest_nodes" method="GET">
+        <input type="text" name="node_id">
+        <input type="submit" name="my-form" value="Send">
+    </form>
+    {% if search_result is not none %}
+        <table border="1">
+            {% for node in search_result %}
+                <tr><td><a href="http://{{node}}">
+								{{node.node_id}}</a></td></tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+    <br/>
+	<table border="1">
+		{% for i, bucket in buckets %}
+			<tr>
+				<td>Bucket {{ i }}:</td>
+				<td>
+					{% for contact in bucket %}
+						<div>
+							<a href="http://{{contact}}">
+								{{contact.node_id}}
+							</a>
+						</div>
+					{% endfor %}
+				</td>
+			</tr>
+		{% endfor %}
+	</table>
+</body>
+</html>
