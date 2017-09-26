@@ -7,29 +7,29 @@
     <h1>Node {{node_id}}</h1>
 
 	Search for an ID:
-	<form action="/closest_nodes" method="GET">
+	<form action="/closest_nodes/" method="GET">
         <input type="text" name="node_id">
         <input type="submit" name="my-form" value="Send">
     </form>
     {% if search_result is not none %}
         <table border="1">
-            {% for node in search_result %}
-                <tr><td><a href="http://{{node}}">
-								{{node.node_id}}</a></td></tr>
+            {% for contact in search_result %}
+                <tr><td><a href="http://{{contact.ip_address}}:{{contact.port}}/">
+								{{contact.node_id}}</a></td></tr>
             {% endfor %}
         </table>
     {% endif %}
 	<br/>
 
 	Search for a key:
-	<form action="/get_value" method="GET">
+	<form action="/get_value/" method="GET">
         <input type="text" name="key">
         <input type="submit" name="my-form" value="Send">
     </form>
 	<br/>
 
 	Store a key/value pair:
-	<form action="/store_value" method="POST">
+	<form action="/store_value/" method="POST">
         Key: <input type="text" name="key"> <br>
         Value: <input type="text" name="value">
         <input type="submit" name="my-form" value="Send">
@@ -45,7 +45,7 @@
 				<td>
 					{% for contact in bucket %}
 						<div>
-							<a href="http://{{contact}}">
+							<a href="http://{{contact.ip_address}}:{{contact.port}}/">
 								{{contact.node_id}}
 							</a>
 						</div>

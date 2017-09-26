@@ -1,3 +1,5 @@
+# The degree of parallelism, while searching
+alpha = 1
 
 # size of the ID-space (and thus number of buckets)
 B = 8

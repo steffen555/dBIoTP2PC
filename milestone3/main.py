@@ -8,6 +8,7 @@ import hashlib
 import time
 import json
 import threading
+import Queue
 
 # needed for Flask to work
 app = Flask(__name__)
@@ -28,6 +29,9 @@ class Contact:
 
     def __repr__(self):
         return "%s@%s:%s" % (self.node_id, self.ip_address, self.port)
+
+    def __hash__(self):
+        return hash(self.node_id)
 
     def to_triple(self):
         return self.ip_address, self.port, self.node_id
@@ -79,17 +83,20 @@ def receive_ping():
         send_delayed_ping(ip_address, port, 0)
     return str(my_id)
 
+
 @app.route("/get_value")
-def handle_get_value():	
-	key = request.args["key"]
-	return "TODO"
+def handle_get_value():
+    key = request.args["key"]
+    return "TODO"
+
 
 @app.route("/store_value", methods=["POST"])
-def handle_store_value():	
-	key = request.form["key"]
-	value = request.form["value"]
-	key_value_pairs[key] = value
-	return redirect("/", code=302)
+def handle_store_value():
+    key = request.form["key"]
+    value = request.form["value"]
+    key_value_pairs[key] = value
+    return redirect("/", code=302)
+
 
 def get_top_k(node_id):
     buckets_lock.acquire()
@@ -113,10 +120,62 @@ def get_closest_nodes_as_html():
     result = render_template("template.html",
                              node_id=my_id,
                              buckets=enumerate(buckets),
-                             search_result=get_top_k(int(node_id)),
-							 kv_pairs=key_value_pairs.items()),
+                             search_result=iterative_find_node(int(node_id)),
+                             kv_pairs=key_value_pairs.items()),
     buckets_lock.release()
     return result
+
+
+def iterative_find_node(node_id):
+    UNPROBED = 0
+    LIVE = 1
+    DEAD = 2
+
+    def get_first_alpha_unprobed(L):
+        L = sorted(L.items(), key=lambda c: distance(c[0].node_id, node_id))
+        unprobed_contacts = [t for t in L if t[1] == UNPROBED]
+        return unprobed_contacts[:config.alpha]
+
+    buckets_lock.acquire()
+    L = {contact: UNPROBED for bucket in buckets for contact in bucket}
+    buckets_lock.release()
+    while True:
+        first_alpha_unprobed_contacts = get_first_alpha_unprobed(L)
+        q = Queue.Queue()
+        threads = []
+        for contact, _ in first_alpha_unprobed_contacts:
+            t = threading.Thread(target=probe, args=(q, contact, node_id))
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
+            contact, result = q.get()
+            if result is None:
+                L[contact] = DEAD
+            else:
+                L[contact] = LIVE
+                for ip, port, node_id in result:
+                    received_contact = Contact(node_id, ip, port, 0)
+                    if received_contact not in L:
+                        L[received_contact] = UNPROBED
+        if (get_number_contacts_with_status(L, LIVE) >= config.k
+            or get_number_contacts_with_status(L, UNPROBED) == 0):
+            break
+    return [contact for contact, status in L.items() if status == LIVE][:config.k]
+
+
+def probe(q, contact, node_id):
+    url = "http://%s:%s/api/kademlia/closest_nodes/%d/" % (contact.ip_address, contact.port, node_id)
+    try:
+        response = requests.get(url, timeout=config.timeout)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+        q.put((contact, None))
+        return
+    q.put((contact, json.loads(response.text)))
+
+
+def get_number_contacts_with_status(L, status):
+    return len([t for t in L.items() if t[1] == status])
 
 
 def send_ping(ip, other_port, needs_ping_back):
@@ -137,20 +196,22 @@ def send_delayed_ping(ip, other_port, needs_ping_back):
     t.start()
 
 
-@app.route("/api/kademlia/values", methods=["POST"])
+@app.route("/api/kademlia/values/", methods=["POST"])
 def receive_store():
     key = request.form["key"]
     value = request.form["value"]
     key_value_pairs[key] = value
     return "", 201
 
+
 def store(ip, port, key, value):
     data = {"key": key, "value": value}
-    url = "http://%s:%d/api/kademlia/values" % (ip, port)
+    url = "http://%s:%d/api/kademlia/values/" % (ip, port)
     response = requests.post(url, data=data)
     return response.status_code == 201
 
-@app.route("/api/kademlia/values", methods=["GET"])
+
+@app.route("/api/kademlia/values/", methods=["GET"])
 def search_for_value():
     key = request.headers["key"]
     node_id = request.headers["node_id"]
@@ -159,15 +220,17 @@ def search_for_value():
     except KeyError:
         return get_closest_nodes_as_json(node_id)
     return value
-    
+
+
 def find_value(ip, port, key):
     headers = {"node_id": my_id, "key": key}
-    url="http://%s:%d/api/kademlia/values" % (ip, port)
+    url = "http://%s:%d/api/kademlia/values/" % (ip, port)
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         return response.text
     else:
         return json.loads(response.text)
+
 
 def distance(x, y):
     return x ^ y
@@ -186,9 +249,11 @@ def init_buckets():
     global buckets
     buckets = [[] for _ in range(config.B)]
 
+
 def init_key_value_pairs():
     global key_value_pairs
     key_value_pairs = {}
+
 
 @app.route("/")
 def render_this_path():
@@ -197,7 +262,7 @@ def render_this_path():
                              node_id=my_id,
                              buckets=enumerate(buckets),
                              search_result=None,
-							 kv_pairs=key_value_pairs.items())
+                             kv_pairs=key_value_pairs.items())
     buckets_lock.release()
     return result
 
