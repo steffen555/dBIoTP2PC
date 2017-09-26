@@ -150,6 +150,25 @@ def store(ip, port, key, value):
     response = requests.post(url, data=data)
     return response.status_code == 201
 
+@app.route("/api/kademlia/values", methods=["GET"])
+def search_for_value():
+    key = request.headers["key"]
+    node_id = request.headers["node_id"]
+    try:
+        value = key_value_pairs[key]
+    except KeyError:
+        return get_closest_nodes_as_json(node_id)
+    return value
+    
+def find_value(ip, port, key):
+    headers = {"node_id": my_id, "key": key}
+    url="http://%s:%d/api/kademlia/values" % (ip, port)
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return json.loads(response.text)
+
 def distance(x, y):
     return x ^ y
 
