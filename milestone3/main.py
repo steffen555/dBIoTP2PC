@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 from uuid import getnode as get_mac
 import math
 import sys
@@ -88,7 +88,8 @@ def handle_get_value():
 def handle_store_value():	
 	key = request.form["key"]
 	value = request.form["value"]
-	return "TODO"
+	key_value_pairs[key] = value
+	return redirect("/", code=302)
 
 def get_top_k(node_id):
     buckets_lock.acquire()
@@ -112,7 +113,8 @@ def get_closest_nodes_as_html():
     result = render_template("template.html",
                              node_id=my_id,
                              buckets=enumerate(buckets),
-                             search_result=get_top_k(int(node_id))),
+                             search_result=get_top_k(int(node_id)),
+							 kv_pairs=key_value_pairs.items()),
     buckets_lock.release()
     return result
 
@@ -175,7 +177,8 @@ def render_this_path():
     result = render_template("template.html",
                              node_id=my_id,
                              buckets=enumerate(buckets),
-                             search_result=None)
+                             search_result=None,
+							 kv_pairs=key_value_pairs.items())
     buckets_lock.release()
     return result
 
