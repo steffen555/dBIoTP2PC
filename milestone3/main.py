@@ -177,7 +177,7 @@ def node_lookup(lookup_type, node_id):
                 else:
                     for ip, port, node_id in json.loads(response.text):
                         received_contact = Contact(node_id, ip, port, 0)
-                        if received_contact not in L:
+                        if received_contact not in L and received_contact.node_id != my_id:
                             L[received_contact] = UNPROBED
         if (get_number_contacts_with_status(L, LIVE) >= config.k
             or get_number_contacts_with_status(L, UNPROBED) == 0):
@@ -245,10 +245,13 @@ def search_for_value():
 @app.route("/get_value/")
 def iterative_find_value():
     key = int(request.args.get("key"))
-    result = node_lookup(LookupType.VALUE, key).value
-    if result is None:
-        return "404: Value not found", 404
-    return result
+    try:
+        return key_value_pairs[key]
+    except KeyError:
+        result = node_lookup(LookupType.VALUE, key).value
+        if result is None:
+            return "404: Value not found", 404
+        return result
 
 
 def distance(x, y):
