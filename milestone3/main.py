@@ -90,12 +90,12 @@ def handle_get_value():
     return "TODO"
 
 
-@app.route("/store_value", methods=["POST"])
-def handle_store_value():
-    key = request.form["key"]
-    value = request.form["value"]
-    key_value_pairs[key] = value
-    return redirect("/", code=302)
+# @app.route("/store_value", methods=["POST"])
+# def handle_store_value():
+#    key = request.form["key"]
+#    value = request.form["value"]
+#    key_value_pairs[key] = value
+#    return redirect("/", code=302)
 
 
 def get_top_k(node_id):
@@ -206,9 +206,20 @@ def receive_store():
 
 def store(ip, port, key, value):
     data = {"key": key, "value": value}
-    url = "http://%s:%d/api/kademlia/values/" % (ip, port)
+    url = "http://%s:%s/api/kademlia/values/" % (ip, port)
     response = requests.post(url, data=data)
     return response.status_code == 201
+
+@app.route("/store_value/", methods=["POST"])
+def iterative_store():
+    key = request.form["key"]
+    print(key)
+    value = request.form["value"]
+    print(value)
+    closest_nodes = iterative_find_node(my_id)
+    for contact in closest_nodes:
+        store(contact.ip_address, contact.port, key, value)
+    return redirect("/", code=302)
 
 
 @app.route("/api/kademlia/values/", methods=["GET"])
