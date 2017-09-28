@@ -83,6 +83,7 @@ def receive_ping():
         send_delayed_ping(ip_address, port, 0)
     return str(my_id)
 
+
 def get_top_k(node_id):
     buckets_lock.acquire()
     contacts = [contact for bucket in buckets for contact in bucket]
@@ -119,6 +120,11 @@ class LookupType:
     NODE = 0
     VALUE = 1
 
+class NodeStatus:
+    UNPROBED = 0
+    LIVE = 1
+    DEAD = 2
+    HAS_VALUE = 3
 
 class NodeLookupResult:
     def __init__(self):
@@ -126,24 +132,21 @@ class NodeLookupResult:
         self.k_closest_nodes = None
 
 
-def node_lookup(lookup_type, node_id):
-    UNPROBED = 0
-    LIVE = 1
-    DEAD = 2
+def node_lookup(lookup_type, key):
     result = NodeLookupResult()
 
     def get_first_alpha_unprobed(L):
-        L = sorted(L.items(), key=lambda c: distance(c[0].node_id, node_id))
-        unprobed_contacts = [t for t in L if t[1] == UNPROBED]
+        L = sorted(L.items(), key=lambda c: distance(c[0].node_id, key))
+        unprobed_contacts = [t for t in L if t[1] == NodeStatus.UNPROBED]
         return unprobed_contacts[:config.alpha]
 
     def probe(q, contact):
         try:
             if lookup_type == LookupType.NODE:
-                url = "http://%s:%s/api/kademlia/closest_nodes/%d/" % (contact.ip_address, contact.port, node_id)
+                url = "http://%s:%s/api/kademlia/closest_nodes/%d/" % (contact.ip_address, contact.port, key)
                 response = requests.get(url, timeout=config.timeout)
             elif lookup_type == LookupType.VALUE:
-                headers = {"key": str(node_id)}
+                headers = {"key": str(key)}
                 url = "http://%s:%s/api/kademlia/values/" % (contact.ip_address, contact.port)
                 response = requests.get(url, headers=headers, timeout=config.timeout)
             else:
@@ -154,7 +157,7 @@ def node_lookup(lookup_type, node_id):
         q.put((contact, response))
 
     buckets_lock.acquire()
-    L = {contact: UNPROBED for bucket in buckets for contact in bucket}
+    L = {contact: NodeStatus.UNPROBED for bucket in buckets for contact in bucket}
     buckets_lock.release()
     while True:
         first_alpha_unprobed_contacts = get_first_alpha_unprobed(L)
@@ -168,21 +171,25 @@ def node_lookup(lookup_type, node_id):
             t.join()
             contact, response = q.get()
             if response is None:
-                L[contact] = DEAD
+                L[contact] = NodeStatus.DEAD
             else:
-                L[contact] = LIVE
                 if lookup_type == LookupType.VALUE and response.status_code == 200:
+                    L[contact] = NodeStatus.HAS_VALUE
                     result.value = response.text
-                    break
                 else:
+                    L[contact] = NodeStatus.LIVE
                     for ip, port, node_id in json.loads(response.text):
                         received_contact = Contact(node_id, ip, port, 0)
                         if received_contact not in L and received_contact.node_id != my_id:
-                            L[received_contact] = UNPROBED
-        if (get_number_contacts_with_status(L, LIVE) >= config.k
-            or get_number_contacts_with_status(L, UNPROBED) == 0):
+                            L[received_contact] = NodeStatus.UNPROBED
+        if ((lookup_type == LookupType.NODE and get_number_contacts_with_status(L, NodeStatus.LIVE) >= config.k)
+            or get_number_contacts_with_status(L, NodeStatus.UNPROBED) == 0
+            or result.value is not None):
             break
-    result.k_closest_nodes = [contact for contact, status in L.items() if status == LIVE][:config.k]
+    result.k_closest_nodes = sorted(
+        [contact for contact, status in L.items()
+        if status == NodeStatus.LIVE][:config.k],
+        key=lambda c: distance(c.node_id, key))
     return result
 
 
@@ -242,16 +249,20 @@ def search_for_value():
         return get_closest_nodes_as_json(key), 303
     return value
 
+
 @app.route("/get_value/")
 def iterative_find_value():
     key = int(request.args.get("key"))
     try:
         return key_value_pairs[key]
     except KeyError:
-        result = node_lookup(LookupType.VALUE, key).value
-        if result is None:
-            return "404: Value not found", 404
-        return result
+        result = node_lookup(LookupType.VALUE, key)
+        if result.value is None:
+            return json.dumps([c.to_triple() for c in result.k_closest_nodes]), 404
+        if len(result.k_closest_nodes) != 0:
+            contact = result.k_closest_nodes[0]
+            store(contact.ip_address, contact.port, key, result.value)
+        return result.value
 
 
 def distance(x, y):
