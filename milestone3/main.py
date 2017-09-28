@@ -83,13 +83,6 @@ def receive_ping():
         send_delayed_ping(ip_address, port, 0)
     return str(my_id)
 
-
-@app.route("/get_value")
-def handle_get_value():
-    key = request.args["key"]
-    return "TODO"
-
-
 def get_top_k(node_id):
     buckets_lock.acquire()
     contacts = [contact for bucket in buckets for contact in bucket]
@@ -119,18 +112,46 @@ def get_closest_nodes_as_html():
 
 
 def iterative_find_node(key):
-    return node_lookup(find_node_probe, key)
+    return node_lookup(LookupType.NODE, key).k_closest_nodes
 
 
-def node_lookup(probe, node_id):
+class LookupType:
+    NODE = 0
+    VALUE = 1
+
+
+class NodeLookupResult:
+    def __init__(self):
+        self.value = None
+        self.k_closest_nodes = None
+
+
+def node_lookup(lookup_type, node_id):
     UNPROBED = 0
     LIVE = 1
     DEAD = 2
+    result = NodeLookupResult()
 
     def get_first_alpha_unprobed(L):
         L = sorted(L.items(), key=lambda c: distance(c[0].node_id, node_id))
         unprobed_contacts = [t for t in L if t[1] == UNPROBED]
         return unprobed_contacts[:config.alpha]
+
+    def probe(q, contact):
+        try:
+            if lookup_type == LookupType.NODE:
+                url = "http://%s:%s/api/kademlia/closest_nodes/%d/" % (contact.ip_address, contact.port, node_id)
+                response = requests.get(url, timeout=config.timeout)
+            elif lookup_type == LookupType.VALUE:
+                headers = {"key": str(node_id)}
+                url = "http://%s:%s/api/kademlia/values/" % (contact.ip_address, contact.port)
+                response = requests.get(url, headers=headers, timeout=config.timeout)
+            else:
+                assert False
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            q.put((contact, None))
+            return
+        q.put((contact, response))
 
     buckets_lock.acquire()
     L = {contact: UNPROBED for bucket in buckets for contact in bucket}
@@ -140,50 +161,30 @@ def node_lookup(probe, node_id):
         q = Queue.Queue()
         threads = []
         for contact, _ in first_alpha_unprobed_contacts:
-            t = threading.Thread(target=probe, args=(q, contact, node_id))
+            t = threading.Thread(target=probe, args=(q, contact))
             threads.append(t)
             t.start()
         for t in threads:
             t.join()
-            contact, result = q.get()
-            if result is None:
+            contact, response = q.get()
+            if response is None:
                 L[contact] = DEAD
             else:
                 L[contact] = LIVE
-                if isinstance(result, list):
-                    for ip, port, node_id in result:
+                if lookup_type == LookupType.VALUE and response.status_code == 200:
+                    result.value = response.text
+                    break
+                else:
+                    for ip, port, node_id in json.loads(response.text):
                         received_contact = Contact(node_id, ip, port, 0)
                         if received_contact not in L:
                             L[received_contact] = UNPROBED
-                else:
-                    break
         if (get_number_contacts_with_status(L, LIVE) >= config.k
             or get_number_contacts_with_status(L, UNPROBED) == 0):
             break
-    return [contact for contact, status in L.items() if status == LIVE][:config.k]
+    result.k_closest_nodes = [contact for contact, status in L.items() if status == LIVE][:config.k]
+    return result
 
-
-def find_node_probe(q, contact, node_id):
-    url = "http://%s:%s/api/kademlia/closest_nodes/%d/" % (contact.ip_address, contact.port, node_id)
-    try:
-        response = requests.get(url, timeout=config.timeout)
-    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-        q.put((contact, None))
-        return
-    q.put((contact, json.loads(response.text)))
-
-def find_value_probe(q, contact, key):
-    headers = {"key": str(key)}
-    url = "http://%s:%d/api/kademlia/values/" % (contact.ip_address, contact.port)
-    try:
-        response = requests.get(url, headers=headers, timeout=config.timeout)
-    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-        q.put((contact, None))
-        return
-    if response.status_code == 200:
-        q.put((contact, response.text))
-    else:
-        q.put((contact, json.loads(response.text)))
 
 def get_number_contacts_with_status(L, status):
     return len([t for t in L.items() if t[1] == status])
@@ -238,22 +239,16 @@ def search_for_value():
     try:
         value = key_value_pairs[key]
     except KeyError:
-        return get_closest_nodes_as_json(key)
+        return get_closest_nodes_as_json(key), 303
     return value
 
-
-# def find_value(ip, port, key):
-#     headers = {"node_id": my_id, "key": key}
-#     url = "http://%s:%d/api/kademlia/values/" % (ip, port)
-#     response = requests.get(url, headers=headers)
-#     if response.status_code == 200:
-#         return response.text
-#     else:
-#         return json.loads(response.text)
-
-
-def iterative_find_value(key):
-    return node_lookup(find_value_probe, key)
+@app.route("/get_value/")
+def iterative_find_value():
+    key = int(request.args.get("key"))
+    result = node_lookup(LookupType.VALUE, key).value
+    if result is None:
+        return "404: Value not found", 404
+    return result
 
 
 def distance(x, y):
