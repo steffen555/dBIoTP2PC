@@ -90,14 +90,6 @@ def handle_get_value():
     return "TODO"
 
 
-# @app.route("/store_value", methods=["POST"])
-# def handle_store_value():
-#    key = request.form["key"]
-#    value = request.form["value"]
-#    key_value_pairs[key] = value
-#    return redirect("/", code=302)
-
-
 def get_top_k(node_id):
     buckets_lock.acquire()
     contacts = [contact for bucket in buckets for contact in bucket]
@@ -126,7 +118,11 @@ def get_closest_nodes_as_html():
     return result
 
 
-def iterative_find_node(node_id):
+def iterative_find_node(key):
+    return node_lookup(find_node_probe, key)
+
+
+def node_lookup(probe, node_id):
     UNPROBED = 0
     LIVE = 1
     DEAD = 2
@@ -154,17 +150,20 @@ def iterative_find_node(node_id):
                 L[contact] = DEAD
             else:
                 L[contact] = LIVE
-                for ip, port, node_id in result:
-                    received_contact = Contact(node_id, ip, port, 0)
-                    if received_contact not in L:
-                        L[received_contact] = UNPROBED
+                if isinstance(result, list):
+                    for ip, port, node_id in result:
+                        received_contact = Contact(node_id, ip, port, 0)
+                        if received_contact not in L:
+                            L[received_contact] = UNPROBED
+                else:
+                    break
         if (get_number_contacts_with_status(L, LIVE) >= config.k
             or get_number_contacts_with_status(L, UNPROBED) == 0):
             break
     return [contact for contact, status in L.items() if status == LIVE][:config.k]
 
 
-def probe(q, contact, node_id):
+def find_node_probe(q, contact, node_id):
     url = "http://%s:%s/api/kademlia/closest_nodes/%d/" % (contact.ip_address, contact.port, node_id)
     try:
         response = requests.get(url, timeout=config.timeout)
@@ -173,6 +172,18 @@ def probe(q, contact, node_id):
         return
     q.put((contact, json.loads(response.text)))
 
+def find_value_probe(q, contact, key):
+    headers = {"key": str(key)}
+    url = "http://%s:%d/api/kademlia/values/" % (contact.ip_address, contact.port)
+    try:
+        response = requests.get(url, headers=headers, timeout=config.timeout)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+        q.put((contact, None))
+        return
+    if response.status_code == 200:
+        q.put((contact, response.text))
+    else:
+        q.put((contact, json.loads(response.text)))
 
 def get_number_contacts_with_status(L, status):
     return len([t for t in L.items() if t[1] == status])
@@ -198,25 +209,24 @@ def send_delayed_ping(ip, other_port, needs_ping_back):
 
 @app.route("/api/kademlia/values/", methods=["POST"])
 def receive_store():
-    key = request.form["key"]
+    key = int(request.form["key"])
     value = request.form["value"]
     key_value_pairs[key] = value
     return "", 201
 
 
 def store(ip, port, key, value):
-    data = {"key": key, "value": value}
+    data = {"key": str(key), "value": value}
     url = "http://%s:%s/api/kademlia/values/" % (ip, port)
     response = requests.post(url, data=data)
     return response.status_code == 201
 
+
 @app.route("/store_value/", methods=["POST"])
 def iterative_store():
-    key = request.form["key"]
-    print(key)
+    key = int(request.form["key"])
     value = request.form["value"]
-    print(value)
-    closest_nodes = iterative_find_node(my_id)
+    closest_nodes = iterative_find_node(key)
     for contact in closest_nodes:
         store(contact.ip_address, contact.port, key, value)
     return redirect("/", code=302)
@@ -224,23 +234,26 @@ def iterative_store():
 
 @app.route("/api/kademlia/values/", methods=["GET"])
 def search_for_value():
-    key = request.headers["key"]
-    node_id = request.headers["node_id"]
+    key = int(request.headers["key"])
     try:
         value = key_value_pairs[key]
     except KeyError:
-        return get_closest_nodes_as_json(node_id)
+        return get_closest_nodes_as_json(key)
     return value
 
 
-def find_value(ip, port, key):
-    headers = {"node_id": my_id, "key": key}
-    url = "http://%s:%d/api/kademlia/values/" % (ip, port)
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.text
-    else:
-        return json.loads(response.text)
+# def find_value(ip, port, key):
+#     headers = {"node_id": my_id, "key": key}
+#     url = "http://%s:%d/api/kademlia/values/" % (ip, port)
+#     response = requests.get(url, headers=headers)
+#     if response.status_code == 200:
+#         return response.text
+#     else:
+#         return json.loads(response.text)
+
+
+def iterative_find_value(key):
+    return node_lookup(find_value_probe, key)
 
 
 def distance(x, y):
