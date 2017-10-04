@@ -125,7 +125,7 @@ def receive_datapoint():
 	raw_data = request.form["data"]
 	originator_nodeid = int(requests.form["originator_nodeid"])
 	description = request.form["description"]
-	add_datapoint(originator_nodeid, description, timestamp, datapoint)
+	add_datapoint(originator_nodeid, description, timestamp, raw_data)
 
 
 def get_top_k(node_id):
@@ -358,16 +358,15 @@ class DataPoint:
 	def __eq__(self, other):
 		return self.raw_data == other.raw_data and self.timestamp == other.raw_data
 
-def add_datapoint(node_id, description, timestamp, datapoint):
-	datapoint = DataPoint(timestamp, raw_data)
+def add_datapoint(node_id, description, timestamp, raw_data):
 	if node_id not in collected_data:
 		collected_data[node_id] = SensorDataCollection(description)
-	collected_data[node_id].add_datapoint(datapoint)
+	collected_data[node_id].add_datapoint(DataPoint(timestamp, raw_data))
 	
 
 def fetch_wot_data_from(node):
 	timestamp, raw_data = json.loads(requests.get(node.url).text)
-	add_datapoint(node.node_id, node.description, timestamp, datapoint)
+	add_datapoint(node.node_id, node.description, timestamp, raw_data)
 
 	# TODO handle if node dies
 
