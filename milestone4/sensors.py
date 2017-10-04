@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request
+from gevent.wsgi import WSGIServer
 import Adafruit_DHT
 import RPi.GPIO as GPIO
 import id_generation
@@ -73,7 +74,10 @@ def main():
 
     connect_sensors_to_kademlia()
 
-    app.run(host="0.0.0.0", port=WEB_SERVER_PORT)
+    http_server = WSGIServer(('', WEB_SERVER_PORT), app)
+    http_server.serve_forever()
+
+    # app.run(host="0.0.0.0", port=WEB_SERVER_PORT, threaded=True)
 
 
 if __name__ == "__main__":

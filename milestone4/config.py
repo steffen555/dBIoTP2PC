@@ -9,7 +9,10 @@ assert (B % 4 == 0)
 k = 2
 
 # timeout for pings
-timeout = 1
+timeout = 10
 
 # how long to wait between each fetch of WoT data
-fetch_timeout = 1
+fetch_timeout = 10
+
+# How many fetches to be missed before we suspect that a node is dead
+max_missed_fetches = 3

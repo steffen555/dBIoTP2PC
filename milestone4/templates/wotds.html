@@ -14,16 +14,13 @@
 					<td><a href='{{ node.url }}'>{{ node }}</a> </td>
 				</tr>
 			{% endif %}
-			
-
-
 		{% endfor %}
 
 	</table>
 
 	<br/>
 	<h1>Here is our data:</h1>
-	
+
 	{% for sensordata_collection in sensordata_collections %}
 		<div>
 				{{ sensordata_collection.description }}
@@ -41,7 +38,7 @@
 					{% endfor %}
 				</table>
 		</div>
-			
+
 	{% endfor %}
 
 </body>
