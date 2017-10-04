@@ -9,9 +9,11 @@
 	<h1>We are responsible for these nodes:</h1>
 	<table>
 		{% for node in nodes %}
-			<tr>
-				<td>{{ node }} </td>
-			</tr>
+			{% if node.we_are_responsible %}
+				<tr>
+					<td><a href='{{ node.url }}'>{{ node }}</a> </td>
+				</tr>
+			{% endif %}
 			
 
 
@@ -31,7 +33,7 @@
 						<td>Time</td>
 						<td>Data</td>
 					</tr>
-					{% for datapoint in sensordata_collection.datapoints %}
+					{% for datapoint in sensordata_collection.data_points %}
 						<tr>
 							<td>{{ datapoint.timestamp }}</td>
 							<td>{{ datapoint.raw_data }}</td>
