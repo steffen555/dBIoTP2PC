@@ -119,10 +119,14 @@ def receive_wot_registration():
 		requests.get(url, headers=request.headers)
 	return "OK"
 
-@app.route("/api/wotds/SOMETHING_REST_IS_HARD", methods=["GET"])
-def receive_TODO():
-	return "TODO"
-	
+@app.route("/api/wotds/datapoints/", methods=["POST"])
+def receive_datapoint():
+	timestamp = float(request.form["timestamp"])
+	raw_data = request.form["data"]
+	originator_nodeid = int(requests.form["originator_nodeid"])
+	description = request.form["description"]
+	add_datapoint(originator_nodeid, description, timestamp, datapoint)
+
 
 def get_top_k(node_id):
 	buckets_lock.acquire()
@@ -350,28 +354,44 @@ class DataPoint:
 	def __init__(self, timestamp, raw_data):
 		self.raw_data = raw_data
 		self.timestamp = timestamp
+	
+	def __eq__(self, other):
+		return self.raw_data == other.raw_data and self.timestamp == other.raw_data
+
+def add_datapoint(node_id, description, timestamp, datapoint):
+	datapoint = DataPoint(timestamp, raw_data)
+	if node_id not in collected_data:
+		collected_data[node_id] = SensorDataCollection(description)
+	collected_data[node_id].add_datapoint(datapoint)
+	
 
 def fetch_wot_data_from(node):
 	timestamp, raw_data = json.loads(requests.get(node.url).text)
-	datapoint = DataPoint(timestamp, raw_data)
-
-	if node.node_id not in collected_data:
-		collected_data[node.node_id] = SensorDataCollection(node.description)
-	
-	collected_data[node.node_id].add_datapoint(datapoint)
+	add_datapoint(node.node_id, node.description, timestamp, datapoint)
 
 	# TODO handle if node dies
+
+	# find k-1 closest nodes
+	closest_contacts = iterative_find_node(node.node_id)[:config.k-1]
+
+	# push the datapoint to them
+	for contact in closest_contacts:
+		data = {"timestamp": str(timestamp), "data": raw_data, 
+				"originator_nodeid": str(node.nodeid),
+				"description": node.description}
+		url = "http://%s:%s/api/wotds/datapoints/" % (contact.ip_address, contact.port)
+		requests.post(url, data=data)
 
 
 # TODO: refactor this file to move out the Kademlia layer.
 
 class SensorDataCollection:
 	def __init__(self, description):
-		self.datapoints = []
+		self.datapoints = set()
 		self.description = description
 	
 	def add_datapoint(self, data_point):
-		self.datapoints.append(data_point)
+		self.datapoints.add(data_point)
 
 nodes_for_which_we_are_responsible = []
 collected_data = {}
