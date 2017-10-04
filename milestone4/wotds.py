@@ -47,7 +47,6 @@ def is_alive(contact):
 
 
 def add_to_bucket(contact):
-	print("Adding %s to a bucket." % contact)
 	if (contact.node_id == my_id):
 		return	# We may never, ever add ourselves to our own bucket!
 	index = int(math.log(distance(my_id, contact.node_id), 2))
@@ -68,8 +67,6 @@ def add_to_bucket(contact):
 		if not is_alive(oldest_contact):
 			bucket.remove(oldest_contact)
 			bucket.append(contact)
-
-	print("Bucket %d is now %s" % (index, bucket))
 
 	buckets[index] = bucket
 	buckets_lock.release()
@@ -121,13 +118,11 @@ def register_wot_node(wot_node):
 						 wot_node.node_id) < distance(closest_other_nodes[0].node_id,
 													  wot_node.node_id)):
 		# we are closest
-		print "I AM CLOSEST; I AM THE CHOSEN ONE"
 		wot_node.we_are_responsible = True
 		known_wot_nodes[wot_node.node_id] = wot_node
 	else:
 		# send it on to the closest one
 		node = closest_other_nodes[0]
-		print "someone else is the hero :( it is", node
 		headers = {"node_id": str(wot_node.node_id),
 				   "url": wot_node.url,
 				   "description": wot_node.description}
@@ -162,7 +157,6 @@ def get_top_k(node_id):
 	buckets_lock.acquire()
 	contacts = [contact for bucket in buckets for contact in bucket]
 	contacts = sorted(contacts, key=lambda c: distance(c.node_id, node_id))
-	print(contacts)
 	top_k = contacts[:config.k]
 	buckets_lock.release()
 	return top_k
@@ -279,7 +273,6 @@ def send_ping(ip, other_port, needs_ping_back):
 	response = requests.get(url, headers=headers, timeout=config.timeout)
 	contact = Contact(int(response.text), ip, other_port, time.time())
 	add_to_bucket(contact)
-	print(response.text)
 
 
 def send_delayed_ping(ip, other_port, needs_ping_back):
@@ -348,7 +341,6 @@ def distance(x, y):
 def init_id():
 	global my_id
 	my_id = id_generation.generate_id(str(get_mac()) + str(my_port))
-	print("My ID is: %d" % my_id)
 
 
 def init_buckets():
@@ -404,10 +396,14 @@ def add_data_point(node, timestamp, raw_data):
 
 
 def fetch_wot_data_from(node):
-	timestamp, raw_data = json.loads(requests.get(node.url).text)
-	add_data_point(node, timestamp, raw_data)
+	try:
+		timestamp, raw_data = json.loads(requests.get(node.url, timeout=config.timeout).text)
+	except (requests.exceptions.Timeout, requests.exceptions.ConnectionError), e:
+		# the thing is dead
+		del known_wot_nodes[node.node_id]
+		return
 
-	# TODO handle if node dies
+	add_data_point(node, timestamp, raw_data)
 
 	# find k-1 closest nodes
 	closest_contacts = iterative_find_node(node.node_id)[:config.k - 1]
@@ -419,10 +415,8 @@ def fetch_wot_data_from(node):
 				"originator_url": node.url,
 				"description": node.description}
 		url = "http://%s:%s/api/wotds/datapoints/" % (contact.ip_address, contact.port)
-		requests.post(url, data=data)
+		requests.post(url, data=data, timeout=config.timeout)
 
-
-# TODO: refactor this file to move out the Kademlia layer.
 
 class SensorDataCollection:
 	def __init__(self, description):
@@ -431,7 +425,9 @@ class SensorDataCollection:
 
 	def add_data_point(self, data_point):
 		self.data_points.add(data_point)
-
+	
+	def get_sorted_data(self):
+		return sorted(list(self.data_points), key=lambda dp: dp.timestamp)
 
 known_wot_nodes = {}
 collected_data = {}
@@ -440,18 +436,12 @@ collected_data = {}
 def check_liveness_of_responsible_node(wot_node):
 	time_since_last = time.time() - wot_node.last_seen
 	if (time_since_last > config.fetch_timeout * config.max_missed_fetches):
-		print "I am the node", my_id
-		print "I know of this node:", wot_node
-		print "and I suspect that it is dead."
 		# We suspect that the thing or the responsible node is dead
 		# We check if the thing is alive
 		try:
 			requests.get(wot_node.url, timeout=config.timeout)
-			print "The thing is alive!!!!!!"
 		except (requests.exceptions.Timeout, requests.exceptions.ConnectionError), e:
 			# The thing did not respond, so we assume it's dead
-			print "The thing is dead!"
-			print "the exception was:", e
 			del known_wot_nodes[wot_node.node_id]
 			return
 		# The thing is alive, so we (re)assign the responsibility
@@ -462,7 +452,6 @@ def wot_fetcher():
 	while True:
 		for wot_node in known_wot_nodes.values():
 			if (wot_node.we_are_responsible):
-				# TODO add try/catch to this in case thing or replicant dies.
 				fetch_wot_data_from(wot_node)
 			else:
 				check_liveness_of_responsible_node(wot_node)

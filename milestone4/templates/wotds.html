@@ -30,7 +30,7 @@
 						<td>Time</td>
 						<td>Data</td>
 					</tr>
-					{% for datapoint in sensordata_collection.data_points %}
+					{% for datapoint in sensordata_collection.get_sorted_data() %}
 						<tr>
 							<td>{{ datapoint.timestamp }}</td>
 							<td>{{ datapoint.raw_data }}</td>
