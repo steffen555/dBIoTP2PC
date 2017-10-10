@@ -26,7 +26,7 @@ Then, in a terminal, run:
 
 	python2 start_script.py
 
-This launches multiple instances of wotds.py around port 5000.
+This launches multiple instances of wotds.py using ports starting from 5000.
 
 In another terminal, run:
 
