@@ -15,7 +15,11 @@ after wotds.py, since it connects to one of the nodes.
 
 To run the system:
 
-In one terminal, run:
+The system is meant to be run entirely on one Raspberry Pi. It will not work
+as expected unless sensors are connected on the expected pins. To accomplish
+this, consult the images of our physical setup in the setup_pictures/ folder.
+
+Then, in a terminal, run:
 
 	python2 start_script.py
 
@@ -48,25 +52,67 @@ Kademlia layer:
 
 GET /api/kademlia/id/
 
-	Implements the 
-GET /api/kademlia/closest_nodes/<int:node_id>/
+	Used to retrieve a node's ID. The node will ping back the current node on
+	the port given in the "port" HTTP header if the "needs_ping_back" HTTP
+	header is set to 1. 
+
+GET /api/kademlia/closest_nodes/<node_id>/
+
+	Retrieves triples representing a list of the k closest nodes encoded as
+	JSON
+
 POST /api/kademlia/values/
+	
+	Stores the key/value pair given in the POST data parameters "key" and
+	"value" at the current node.
+
+GET /api/kademlia/values/
+
+	Fetches the value corresponding to the key given in the "key" HTTP header.
+
+
+Iterative versions of these functionalities can be accessed through the web
+interface of our nodes.
+
 
 
 WoTDS layer:
 	
 GET /api/wotds/responsibility/
+
+	Notifies the node that it is now responsible for periodically fetching
+	data from the WoT device whose details are given in the "node_id", "url"
+	and "description" HTTP headers.
+
 GET /api/wotds/registration/
+	
+	A request to this URL is made by a WoT device to join the network. The
+	device identifies itself using the "node_id", "url" and "description" HTTP
+	headers. The queried node will then search in the Kademlia network to find
+	the responsible node and notify it with a "responsibility" request.
+
 POST /api/wotds/datapoints/
-GET /api/kademlia/values/
+	
+	This request is used for replication; when the node responsible for a WoT
+	device has fetched some data, the node uses this request to POST the data
+	pointto k-1 other nodes in the network. The data is given in the "data"
+	POST parameter, and metadata is given in the "timestamp",
+	"originator_nodeid", "originator_url", and "description" POST parameters.
+
 
 
 Sensor data layer:
 
 
 GET /pi/sensors/temperature/0/
+
+
 GET /pi/sensors/humidity/0/
+
+
 GET /pi/sensors/motion/0/
+
+
 POST /pi/actuators/leds/0/
 
 
