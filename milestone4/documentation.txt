@@ -8,8 +8,8 @@ it easy to launch several instances of wotds.py, simulating several nodes
 connected to the network.
 
 sensors.py: contains code that collects sensor data and serves it via a web
-API. This script should be run at most once per Raspberry Pi. It should run
-after wotds.py, since it connects to one of the nodes.
+API. This script should be run once per Raspberry Pi. It should run after
+wotds.py, since it connects to one of the nodes.
 
 
 
@@ -106,59 +106,22 @@ Sensor data layer:
 
 GET /pi/sensors/temperature/0/
 
+	Retrieves JSON representing a list which contains a timestamp and a raw
+	data point which denotes the current temperature at temperature sensor 0.
+
 
 GET /pi/sensors/humidity/0/
 
+	Retrieves JSON representing a list which contains a timestamp and a raw
+	data point which denotes the current humidity at humidity sensor 0.
 
 GET /pi/sensors/motion/0/
 
+	Retrieves JSON representing a list which contains a timestamp and a raw
+	data point which denotes whether motion was detected at motion sensor 0.
 
 POST /pi/actuators/leds/0/
 
-
-
-
-
-
-
-
-
-........... old below ............
-
-main.py is the main script. It is supposed to be run on the command line.
-
-The first argument to main.py is the port number on which to run the peer. Two
-more arguments, an IP address and a port, may optionally be given. If they are
-given, they will be used as the initial peer in the network.
-
-After running main.py, a web interface is available on the local machine on
-the given port.
-
-
-The system can also be accessed programatically via the following API:
-
---- PUT /api/kademlia/nodes/MY_ID/ ---
-
-This implements the PING command of Kademlia. It is used to add the sender to
-the recipient's buckets list. MY_ID must be a decimal integer representing the
-sender's node ID. The sender's port number is given as the "port" parameter in
-the HTTP request body.
-
-
---- GET /api/kademlia/closest_nodes/NODE_ID/ ---
-
-This implements the FIND_NODE command of Kademlia. It is used to find the k
-closest nodes to NODE_ID. The result is a list of up to k triples of
-(ip_address, port, node_id) represented as JSON.
-
-
-
-
-
-Other notes:
-- we use Flask as our web server
-- we use the Python Requests module as HTTP client
-- we use the built-in Python JSON module to jsonify data in FIND_NODE
-- the start_script.py file lets us automatically spawn a number of peers which
-  connect to each other
+	Used to turn the LED on the device on or off, depending on whether the
+	POST parameter "value" is set to "1" or "0", respectively.
 
