@@ -1,0 +1,16 @@
+
+- distributed voip
+- distributed card game (without rules)
+- monitoring (cameras)
+- p2p syvkabale
+- reverse engineering IoT device
+- bluetooth chatroom
+- clicker games
+- distribueret flerspiller lynstratego
+- casino
+- cards against humanity
+- ego
+- flip a coin
+- russisk roulette
+- 
+
