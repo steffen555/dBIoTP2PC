@@ -98,7 +98,7 @@ POST /api/wotds/datapoints/
 	
 	This request is used for replication; when the node responsible for a WoT
 	device has fetched some data, the node uses this request to POST the data
-	pointto k-1 other nodes in the network. The data is given in the "data"
+	point to k-1 other nodes in the network. The data is given in the "data"
 	POST parameter, and metadata is given in the "timestamp",
 	"originator_nodeid", "originator_url", and "description" POST parameters.
 
@@ -125,6 +125,6 @@ GET /pi/sensors/motion/0/
 
 POST /pi/actuators/leds/0/
 
-	Used to turn the LED on the device on or off, depending on whether the
-	POST parameter "value" is set to "1" or "0", respectively.
+	Can be used to turn the LED on the device on or off, depending on whether
+	the POST parameter "value" is set to "1" or "0", respectively.
 
