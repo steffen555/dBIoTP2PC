@@ -1,5 +1,84 @@
 
 
+The system consists of two scripts:
+
+wotds.py: contains the WoT-DataStorage layer and the underlying Kademlia
+layer. The majority of our code resides here. The script start_script.py makes
+it easy to launch several instances of wotds.py, simulating several nodes
+connected to the network.
+
+sensors.py: contains code that collects sensor data and serves it via a web
+API. This script should be run at most once per Raspberry Pi. It should run
+after wotds.py, since it connects to one of the nodes.
+
+
+
+To run the system:
+
+In one terminal, run:
+
+	python2 start_script.py
+
+This launches multiple instances of wotds.py around port 5000.
+
+In another terminal, run:
+
+	python2 sensors.py
+
+This connects to the node on port 5000, which finds the responsible node and
+assigns responsibility to it with the help of the Kademlia layer. Data will
+then be periodically fetched and stored in the network through the web API.
+
+
+
+To manually run the wotds.py script, the usage is as follows:
+
+	python2 wotds.py <port>
+		launches a lone node which does not connect anywhere
+
+	python2 wotds.py <own port> <remote IP> <remote port>
+		launches a node which joins the network by connecting to the given ip
+		and port
+
+
+
+Internally, the scripts use the following API:
+
+Kademlia layer:
+
+GET /api/kademlia/id/
+
+	Implements the 
+GET /api/kademlia/closest_nodes/<int:node_id>/
+POST /api/kademlia/values/
+
+
+WoTDS layer:
+	
+GET /api/wotds/responsibility/
+GET /api/wotds/registration/
+POST /api/wotds/datapoints/
+GET /api/kademlia/values/
+
+
+Sensor data layer:
+
+
+GET /pi/sensors/temperature/0/
+GET /pi/sensors/humidity/0/
+GET /pi/sensors/motion/0/
+POST /pi/actuators/leds/0/
+
+
+
+
+
+
+
+
+
+........... old below ............
+
 main.py is the main script. It is supposed to be run on the command line.
 
 The first argument to main.py is the port number on which to run the peer. Two
