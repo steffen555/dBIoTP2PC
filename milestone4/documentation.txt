@@ -19,6 +19,9 @@ The system is meant to be run entirely on one Raspberry Pi. It will not work
 as expected unless sensors are connected on the expected pins. To accomplish
 this, consult the images of our physical setup in the setup_pictures/ folder.
 
+Ensure that the "gevent", "flask" and "requests" modules are installed for
+Python 2.
+
 Then, in a terminal, run:
 
 	python2 start_script.py
