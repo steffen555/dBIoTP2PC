@@ -44,8 +44,8 @@ To manually run the wotds.py script, the usage is as follows:
 		launches a lone node which does not connect anywhere
 
 	python2 wotds.py <own port> <remote IP> <remote port>
-		launches a node which joins the network by connecting to the given ip
-		and port
+		launches a node which joins the network by connecting to the given
+		remote ip and port
 
 
 
@@ -62,7 +62,7 @@ GET /api/kademlia/id/
 GET /api/kademlia/closest_nodes/<node_id>/
 
 	Retrieves triples representing a list of the k closest nodes encoded as
-	JSON
+	JSON.
 
 POST /api/kademlia/values/
 	
