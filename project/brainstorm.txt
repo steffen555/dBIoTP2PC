@@ -12,5 +12,57 @@
 - ego
 - flip a coin
 - russisk roulette
+- use webrtc somehow?
 - 
+
+
+games:
+- yahtzee
+- ludo
+- our own RPG
+- matador
+- stratego
+- snyd / mayer
+- poker (+variants)
+- chess
+- uno
+- krig
+- tetris
+- scrabble
+- blackjack
+- mao
+- multiplayer clicker
+- pong
+- kryds og bolle
+- pacman
+- roulette
+- sorteper
+- fisk
+- set
+- monkey ladder
+- digit span
+- battleship
+- prime factoring
+- benchmarking
+- pokemon
+- taleordensystem / håndsoprækning
+- D&D
+- MUD
+- guess the pattern
+- tower defence
+- sudoku
+- go
+- shogi
+- xiang qi
+- klodsmajor
+- pass the bomb
+- minecraft
+- 
+
+
+
+RPG
+uno
+scrabble
+
 
